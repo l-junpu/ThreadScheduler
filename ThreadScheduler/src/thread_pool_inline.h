@@ -76,25 +76,54 @@ namespace jpd
         return TaskPromise->get_future();
     }
 
-    template <typename Func, typename Container, typename ReturnType>
+    template <typename Func, typename Container, typename... Args, typename ReturnType>
     requires( std::ranges::contiguous_range<Container> )
     inline [[nodiscard]]
-    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionTask(const size_t PartitionCount, Func&& F, Container& Data) noexcept
+    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionTask(const size_t PartitionCount, Func&& F, Container& Data, Args&&... args) noexcept
     {
-        // This One Is Challenging
-        // Potentially Use Iterators As Parameters For Func - std::advance for begin and end
+        using ForwardIt = typename Container::iterator;
+
+        size_t StartingIndex = 0;
+        GroupTasks<ReturnType> TaskFutures(PartitionCount);
+        PartitionTasks PartitionData(ComputeThreadCount(PartitionCount));
+        auto StartIndices = PartitionData.PartitionLoopIndices(0, Data.size() - 1);
+
+        for (size_t i = 0; i < PartitionCount - 1; ++i)
+        {
+            ForwardIt StartIterator = std::begin(Data);
+            ForwardIt EndIterator   = std::begin(Data);
+            std::advance(StartIterator, StartingIndex);
+            std::advance(EndIterator, StartingIndex + StartIndices[i] - 1);
+            StartingIndex += StartIndices[i];
+
+            TaskFutures[i] = QueueTask( std::forward<Func>(F)
+                                      , StartIterator
+                                      , EndIterator
+                                      , std::forward<Args>(args)... );
+        }
+
+        ForwardIt StartIterator = std::begin(Data);
+        ForwardIt EndIterator   = std::end(Data);
+        std::advance(StartIterator, StartingIndex - 1);
+        TaskFutures[PartitionCount - 1] = QueueTask( std::forward<Func>(F)
+                                                   , StartIterator
+                                                   , EndIterator
+                                                   , std::forward<Args>(args)... );
+
+        return TaskFutures;
     }
 
     template <typename Func, typename... Args, typename ReturnType>
     inline [[nodiscard]]
     GroupTasks<ReturnType> ThreadPool::QueueAndPartitionLoop(const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept
     {
+        assert(PartitionCount > 0);
         return QueueAndPartitionLoop(0, EndIndex, PartitionCount, std::forward<Func>(F), std::forward<Args>(args)...);
     }
 
     template <typename Func, typename... Args, typename ReturnType>
     inline [[nodiscard]]
-    GroupTasks<ReturnType>  ThreadPool::QueueAndPartitionLoop(const size_t StartIndex, const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept
+    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionLoop(const size_t StartIndex, const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept
     {
         assert(PartitionCount > 0);
 
@@ -110,6 +139,7 @@ namespace jpd
                                       , StartIndices[i + 1]
                                       , std::forward<Args>(args)... );
         }
+
         TaskFutures[StartIndices.size() - 1] = QueueTask( std::forward<Func>(F)
                                                         , StartIndices.back()
                                                         , EndIndex
@@ -121,8 +151,16 @@ namespace jpd
     inline
     void ThreadPool::WaitForAllTasks(void) noexcept
     {
-        
+        m_Waiting = true;
+        std::unique_lock<std::mutex> LockThreads(m_MutexLock);
+        m_CVTaskCompleted.wait(LockThreads, [this]{ return m_TotalTaskCount == (m_Paused ? m_TaskQueue.size()
+                                                                                   : 0); });
+        m_Waiting = false;
     }
+
+
+
+
 
 
 
@@ -180,6 +218,7 @@ namespace jpd
                 {
                     m_CVTaskCompleted.notify_one();
                 }
+                std::cout << "Task Count: " << m_TotalTaskCount << std::endl;
             }
         }
     }

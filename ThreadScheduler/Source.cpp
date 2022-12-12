@@ -48,13 +48,19 @@ int main()
 
     
 
-    jpd::ThreadPool Pool(std::thread::hardware_concurrency());
+    jpd::ThreadPool Pool( 3 ); // Use Only 3 Threads For E.g.
     auto future1 = Pool.QueueTask(func, 0500, "Testing da bomb 1");
     auto future2 = Pool.QueueTask(func, 1000, "Testing da bomb 2");
     auto future3 = Pool.QueueTask(func, 1500, "Testing da bomb 3");
-    std::cout << future1.get() << std::endl;
-    std::cout << future2.get() << std::endl;
-    std::cout << future3.get() << std::endl;
+    Pool.QueueTask(func, 2500, "Testing da bomb 3");
+    Pool.QueueTask(func, 4500, "Testing da bomb 3");
+    Pool.QueueTask(func, 1500, "Testing da bomb 3");
+    Pool.QueueTask(func, 500, "Testing da bomb 3");
+    Pool.QueueTask(func, 2500, "Testing da bomb 3");
+    Pool.WaitForAllTasks();
+    //std::cout << future1.get() << std::endl;
+    //std::cout << future2.get() << std::endl;
+    //std::cout << future3.get() << std::endl;
     
 
     std::cout << "\n\n\nDisplaying all Multi-Future Values" << std::endl;
@@ -69,4 +75,35 @@ int main()
     auto multi_future_results = multi_futures.GetResults();
     for (auto results : multi_future_results)
         std::cout << "Multi-Future Parallelized Loop Results: " << results << std::endl;
+
+
+
+
+    using VecIter = typename std::vector<int>::iterator;
+    std::mutex vector_lock;
+    std::vector<int> TestVectorIterators(3);
+    int iter_count = 0;
+    for (auto& v : TestVectorIterators)
+        v = iter_count++;
+    Pool.QueueAndPartitionTask(3, [](VecIter start, VecIter end)
+                                  {
+                                      std::cout << "Iterator Partition" << std::endl;
+                                      //std::unique_lock IterLock(m);
+                                      //IterLock.lock();
+                                      while (start != end)
+                                      {
+                                          int Data = *start;
+                                          //IterLock.unlock();
+
+                                          // Do stuff on data
+                                          std::cout << "Partition Container Value: " << Data << std::endl;
+                                          Data += 1;
+
+                                          //IterLock.lock();
+                                          *start = Data;
+                                          ++start;
+                                       }
+                                       //IterLock.unlock();
+
+                                  }, TestVectorIterators);
 }
