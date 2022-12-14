@@ -38,19 +38,11 @@ namespace jpd
 
         template <typename Func, typename... Args>
         inline [[nodiscard]]
-        void InsertTask(Func&& F, Args&&... args) noexcept;
+        void QueueTask(Func&& F, Args&&... args) noexcept;
 
         template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, std::decay_t<Args>...>>
         inline [[nodiscard]]
-        std::future<ReturnType> QueueTask(Func&& F, Args&&... args) noexcept;
-
-        // regardless of iterator or not, user is required to apply scope lock to protect the iterator when accessing it
-        // write a concepts requires statement to extract container::iterator so code can be cleaner
-        template < typename Func, typename Container, typename... Args
-                 , typename ReturnType = std::invoke_result_t<std::decay_t<Func>, typename Container::iterator&, typename Container::iterator&, std::decay_t<Args>&...>>
-        requires( std::ranges::contiguous_range<Container> )
-        inline [[nodiscard]]
-        GroupTasks<ReturnType> QueueAndPartitionTask(const size_t PartitionCount, Func&& F, Container& Data, Args&&... args) noexcept;
+        std::future<ReturnType> QueueFunction(Func&& F, Args&&... args) noexcept;
 
         template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, std::decay_t<Args>...>>
         inline [[nodiscard]]
@@ -62,6 +54,9 @@ namespace jpd
 
         inline
         void WaitForAllTasks(void) noexcept;
+
+        inline
+        void ResetThreads(const size_t ThreadCount = 0) noexcept;
 
     private:
 
@@ -83,11 +78,11 @@ namespace jpd
         /*
             Variables
         */
+        size_t                           m_AvailableThreads       = std::thread::hardware_concurrency();
         std::atomic_bool                 m_Running                = false;
         std::atomic_bool                 m_Waiting                = false;
         std::atomic_bool                 m_Paused                 = false;
         std::atomic_int32_t              m_TotalTaskCount         = 0;
-        size_t                           m_AvailableThreads       = std::thread::hardware_concurrency();
         std::mutex                       m_MutexLock              = {};
         std::condition_variable          m_CVNewTask              = {};
         std::condition_variable          m_CVTaskCompleted        = {};

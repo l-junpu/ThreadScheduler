@@ -14,7 +14,7 @@ namespace jpd
     }
 
     template <typename ReturnType>
-    [[nodiscard]]
+    inline [[nodiscard]]
     std::future<ReturnType>& GroupTasks<ReturnType>::GetFuture(const size_t Index) noexcept
     {
         assert(Index < m_Tasks.size());
@@ -23,7 +23,7 @@ namespace jpd
     }
 
     template <typename ReturnType>
-    [[nodiscard]]
+    inline [[nodiscard]]
     std::future<ReturnType>& GroupTasks<ReturnType>::operator[](const size_t Index) noexcept
     {
         return GetFuture(Index);
@@ -40,7 +40,7 @@ namespace jpd
     }
 
     template <typename ReturnType>
-    [[nodiscard]]
+    inline [[nodiscard]]
     std::vector<ReturnType> GroupTasks<ReturnType>::GetResults(void) noexcept requires(!std::same_as<ReturnType, void>)
     {
         std::vector<ReturnType> Results(m_Tasks.size());

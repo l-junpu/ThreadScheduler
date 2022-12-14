@@ -13,9 +13,11 @@ namespace jpd
     {
     public:
 
-        explicit PartitionTasks(const size_t PartitionCount) noexcept; // probably accept start and end indexes also
+        explicit PartitionTasks(const size_t PartitionCount, const size_t StartIndex = 0, const size_t EndIndex = 0) noexcept;
 
-        // Specialize This To Cover For C-Style Arrays
+        inline [[nodiscard]]
+        std::vector<size_t> PartitionData(void) noexcept;
+
         template <typename Container>
         requires( std::ranges::contiguous_range<Container> )
         inline [[nodiscard]]
@@ -25,10 +27,15 @@ namespace jpd
         std::vector<size_t> PartitionData(const size_t DataCount) noexcept;
 
         inline [[nodiscard]]
-        std::vector<size_t> PartitionLoopIndices(const size_t StartIndex, const size_t EndIndex) noexcept;
+        std::vector<size_t> PartitionLoopIndices(void) noexcept;
+
+        inline [[nodiscard]]
+        std::vector<size_t> PartitionLoopIndices(size_t StartIndex, size_t EndIndex) noexcept;
 
     private:
 
+        size_t m_StartIndex     = 0;
+        size_t m_EndIndex       = 0;
         size_t m_PartitionCount = 1;
     };
 }

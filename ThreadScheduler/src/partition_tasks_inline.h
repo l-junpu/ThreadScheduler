@@ -2,28 +2,41 @@
 
 namespace jpd
 {
-    PartitionTasks::PartitionTasks(const size_t PartitionCount) noexcept : m_PartitionCount{ PartitionCount }
+    PartitionTasks::PartitionTasks(const size_t PartitionCount, const size_t StartIndex, const size_t EndIndex) noexcept :
+        m_PartitionCount{ PartitionCount }
+    ,   m_StartIndex{StartIndex}
+    ,   m_EndIndex{EndIndex}
     {
         assert(m_PartitionCount > 0);
+
+        if (m_StartIndex > m_EndIndex)
+        {
+            std::swap(m_StartIndex, m_EndIndex);
+        }
     }
 
-    // Specialize This To Cover For C-Style Arrays
+    inline [[nodiscard]]
+    std::vector<size_t> PartitionTasks::PartitionData(void) noexcept
+    {
+        return PartitionData(m_EndIndex - m_StartIndex);
+    }
+
     template <typename Container>
     requires( std::ranges::contiguous_range<Container> )
-    [[nodiscard]]
+    inline [[nodiscard]]
     std::vector<size_t> PartitionTasks::PartitionData(const Container& Data) noexcept
     {
         return PartitionData(Data.size());
     }
 
-    [[nodiscard]]
-    std::vector<size_t> PartitionTasks::PartitionData(const size_t DataCount) noexcept
+    inline [[nodiscard]]
+        std::vector<size_t> PartitionTasks::PartitionData(const size_t DataCount) noexcept
     {
         size_t Block = (DataCount / m_PartitionCount);
         float  FBlock = (DataCount / static_cast<float>(m_PartitionCount));
 
         size_t MainBlock = Block != FBlock ? Block + 1
-                                           : Block;
+            : Block;
         size_t LastBlock = DataCount - (MainBlock * (m_PartitionCount - 1));
 
         std::vector<size_t> PartitionedGroupSize(m_PartitionCount, MainBlock);
@@ -33,10 +46,19 @@ namespace jpd
         return PartitionedGroupSize;
     }
 
-    [[nodiscard]]
+    inline [[nodiscard]]
+    std::vector<size_t> PartitionTasks::PartitionLoopIndices(void) noexcept
+    {
+        return PartitionLoopIndices(m_StartIndex, m_EndIndex);
+    }
+
+    inline [[nodiscard]]
     std::vector<size_t> PartitionTasks::PartitionLoopIndices(size_t StartIndex, size_t EndIndex) noexcept
     {
-        if (EndIndex < StartIndex) std::swap(StartIndex, EndIndex);
+        if (EndIndex < StartIndex)
+        {
+            std::swap(StartIndex, EndIndex);
+        }
 
         size_t DataCount = EndIndex - StartIndex;
         size_t Block = (DataCount / m_PartitionCount);
@@ -53,9 +75,6 @@ namespace jpd
             PartitionedGroupSize[i] = StartIndex + i * MainBlock;
         }
         PartitionedGroupSize[PartitionedGroupSize.size() - 1] = EndIndex - LastBlock;
-
-        for (auto i : PartitionedGroupSize)
-            std::cout << "Split Loop Start Index: " << i << std::endl;
 
         // Returns A Vector Of Starting Indices Of The For Loop
         return PartitionedGroupSize;
