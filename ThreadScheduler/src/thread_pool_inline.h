@@ -2,8 +2,9 @@
 
 namespace jpd
 {
-    ThreadPool::ThreadPool(const size_t ThreadCount) noexcept :
+    ThreadPool::ThreadPool(const size_t ThreadCount, const size_t MinimumPartitionSize) noexcept :
         m_AvailableThreads{ ComputeThreadCount(ThreadCount) }
+    ,   m_MinPartitionSize{ MinimumPartitionSize }
     {
         CreateThreads();
     }
@@ -40,12 +41,80 @@ namespace jpd
         m_CVNewTask.notify_one();
     }
 
-    template <typename Func, typename... Args, typename ReturnType>
+    // test
+    template <typename... T_Args, typename... T_Values, typename T_Concat_Tuple = void>
+    inline std::tuple<T_Args...> ReturnValidType(std::tuple<T_Args...>* Args, std::tuple<T_Values...>* Values, T_Concat_Tuple* Output, const size_t Index)
+    {
+        using FuncParamType  = std::tuple<T_Args...>;
+        using InputParamType = std::tuple<T_Values...>;
+
+        using ExtractedType = Extract<Index, FuncParamType>::Type;
+        using InputType     = Extract<Index, InputParamType>::Type;
+
+        // Index >= 1
+        if (Output)
+        {
+            auto CatTuple = std::tuple_cat(*Output, std::is_lvalue_reference_v<ExtractedType> ? std::ref(std::get<Index>(*Values))
+                                                                                              : std::forward<InputType>(std::get<Index>(Values)) );
+
+            if (Index + 1 == sizeof...(T_Args))
+            {
+                PrintTypes(std::cout, CatTuple);
+                return std::move(CatTuple);
+            }
+            else
+            {
+                return ReturnValidType(Args, Values, &CatTuple, Index+1);
+            }
+        }
+        // Index == 0
+        else
+        {
+            assert(Index == 0);
+
+            auto BaseTuple = std::make_tuple<ExtractedType>( std::is_lvalue_reference_v<ExtractedType> ? std::ref(std::get<Index>(*Values))
+                                                                                                       : std::forward<InputType>(std::get<Index>(Values)) );
+            return ReturnValidType(Args, Values, &BaseTuple, Index+1);
+        }
+    }
+
+    template <typename... T_Args, typename... T_Values>
+    inline std::tuple<T_Args...> ReturnValidType(std::tuple<T_Args...>* Args, std::tuple<T_Values...>* Values)
+    {
+        assert( sizeof...(T_Args) == sizeof...(T_Values) );
+        int* a = nullptr;
+        return ReturnValidType(Args, Values, a, 0);
+    }
+
+    template <typename... Args>
+    void PrintTypes(std::ostream& out, Args&&... args)
+    {
+        out << "\n\n";
+        (( out << "Type: " << typeid(args).name() ), ...);
+        out << "\n\n";
+    }
+    template <typename... Args>
+    void PrintTypes(std::ostream& out, std::tuple<Args...>&)
+    {
+        out << "\n\n";
+        ((out << "Type: " << typeid(Args).name()), ...);
+        out << "\n\n";
+    }
+    template <typename... Args>
+    void PrintTypes(std::ostream& out)
+    {
+        out << "\n\n";
+        ((out << "Type: " << typeid(Args).name()), ...);
+        out << "\n\n";
+    }
+    // test
+
+    template <typename Func, typename... T_Args, typename ReturnType>
     inline [[nodiscard]]
-    std::future<ReturnType> ThreadPool::QueueFunction(Func&& F, Args&&... args) noexcept
+    std::future<ReturnType> ThreadPool::QueueFunction(Func&& F, T_Args&&... Args) noexcept
     {
         std::function<ReturnType()> Task = std::bind( std::forward<Func>(F)
-                                                    , std::forward<Args>(args)... );
+                                                    , std::forward<T_Args>(Args)... );
         std::shared_ptr<std::promise<ReturnType>> TaskPromise = std::make_shared<std::promise<ReturnType>>();
 
         QueueTask( [Task, TaskPromise]()
@@ -85,11 +154,18 @@ namespace jpd
         return QueueAndPartitionLoop(0, EndIndex, PartitionCount, std::forward<Func>(F), std::forward<Args>(args)...);
     }
 
-    template <typename Func, typename... Args, typename ReturnType>
+    template <typename Func, typename... T_Args, typename ReturnType>
     inline [[nodiscard]]
-    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionLoop(const size_t StartIndex, const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept
+    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionLoop(const size_t StartIndex, const size_t EndIndex, const size_t PartitionCount, Func&& F, T_Args&&... Args) noexcept
     {
         assert(PartitionCount > 0);
+
+        using Details = Traits<decltype(F)>;
+        
+        PrintTypes(std::cout, std::forward<T_Args>(Args)...);
+        PrintTypes<Details::Args_T>(std::cout);
+        std::tuple<T_Args...> ParamsToConvertTuple = std::make_tuple<T_Args...>( std::forward<T_Args>(Args)... );
+        std::tuple<Details::Args_T> FnInputParams = ReturnValidType(null_tuple_v<Details::Args_T>, &ParamsToConvertTuple);
 
         // Assign Relevant Number Of Partitions
         GroupTasks<ReturnType> TaskFutures(PartitionCount);
@@ -101,13 +177,13 @@ namespace jpd
             TaskFutures[i] = QueueFunction( std::forward<Func>(F)
                                           , StartIndices[i]
                                           , StartIndices[i + 1]
-                                          , std::forward<Args>(args)... );
+                                          , std::forward<T_Args>(Args)... );
         }
 
         TaskFutures[StartIndices.size() - 1] = QueueFunction( std::forward<Func>(F)
                                                             , StartIndices.back()
                                                             , EndIndex
-                                                            , std::forward<Args>(args)... );
+                                                            , std::forward<T_Args>(Args)... );
 
         return TaskFutures;
     }

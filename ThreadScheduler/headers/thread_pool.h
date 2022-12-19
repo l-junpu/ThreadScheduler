@@ -2,21 +2,6 @@
 
 namespace jpd
 {
-    template <class, class Enable = void> struct is_iterator : std::false_type {};
-    template <typename T> 
-    struct is_iterator
-    <T, 
-     typename std::enable_if<
-        std::is_base_of<std::input_iterator_tag, typename std::iterator_traits<T>::iterator_category>::value ||
-        std::is_same<std::output_iterator_tag, typename std::iterator_traits<T>::iterator_category>::value 
-     >::type> 
-     : std::true_type {};
-
-    template <typename T>
-    using is_iterator_t = typename is_iterator<T>::value;
-
-
-
     class [[nodiscard]] ThreadPool final
     {
     public:
@@ -26,7 +11,7 @@ namespace jpd
         /*
             Public Member Functions
         */
-        explicit ThreadPool(const size_t ThreadCount = 0) noexcept;
+        explicit ThreadPool(const size_t ThreadCount = 0, const size_t MinimumPartitionSize = 25) noexcept;
 
         ~ThreadPool() noexcept;
 
@@ -40,15 +25,15 @@ namespace jpd
         inline [[nodiscard]]
         void QueueTask(Func&& F, Args&&... args) noexcept;
 
-        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, std::decay_t<Args>...>>
+        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t < std::decay_t<Func>, Args...>>
         inline [[nodiscard]]
         std::future<ReturnType> QueueFunction(Func&& F, Args&&... args) noexcept;
 
-        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, std::decay_t<Args>...>>
+        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, Args...>>
         inline [[nodiscard]]
         GroupTasks<ReturnType> QueueAndPartitionLoop(const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept;
 
-        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, std::decay_t<Args>...>>
+        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, Args...>>
         inline [[nodiscard]]
         GroupTasks<ReturnType> QueueAndPartitionLoop(const size_t StartIndex, const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept;
 
@@ -78,15 +63,16 @@ namespace jpd
         /*
             Variables
         */
-        size_t                           m_AvailableThreads       = std::thread::hardware_concurrency();
-        std::atomic_bool                 m_Running                = false;
-        std::atomic_bool                 m_Waiting                = false;
-        std::atomic_bool                 m_Paused                 = false;
-        std::atomic_int32_t              m_TotalTaskCount         = 0;
-        std::mutex                       m_MutexLock              = {};
-        std::condition_variable          m_CVNewTask              = {};
-        std::condition_variable          m_CVTaskCompleted        = {};
-        std::queue<VoidFunc>             m_TaskQueue              = {};
-        std::unique_ptr<std::thread[]>   m_Threads                = nullptr;
+        size_t                          m_AvailableThreads  = std::thread::hardware_concurrency();  // Number Of Threads Allocated To Thread Scheduler
+        size_t                          m_MinPartitionSize  = 25;                                   // Minimum Number Of Elements In Each Partition - Reduces Number Of Tasks If Unnecessary
+        std::mutex                      m_MutexLock         = {};                                   // Assists With Locking Of Data Accessed In Different Threads
+        std::atomic_bool                m_Running           = false;                                // Controls Task Queue - Runs Task from m_TaskQueue If m_Running == True
+        std::atomic_bool                m_Waiting           = false;                                // Controls Task Queue - Halts All Tasks from m_TaskQueue If m_Waiting == True
+        std::atomic_bool                m_Paused            = false;                                // Controls Task Queue - Halts All Tasks (Only When Resetting Thread Pool)
+        std::atomic_int32_t             m_TotalTaskCount    = 0;                                    // Tracks Total Number Of Active Tasks - TaskQueue + CurrentlyExecuting
+        std::condition_variable         m_CVNewTask         = {};                                   // Enables Worker Thread Whenever A Task Is Available And Running
+        std::condition_variable         m_CVTaskCompleted   = {};                                   // Notifies Main Thread Each Time A Task Is Completed If User Is Waiting For Current Tasks - Unwaits When Queued Tasks Are Completed
+        std::queue<VoidFunc>            m_TaskQueue         = {};                                   // Stores Each Task Assigned To Thread Scheduler
+        std::unique_ptr<std::thread[]>  m_Threads           = nullptr;                              // Stores All Worker Threads
     };
 }

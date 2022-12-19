@@ -30,7 +30,7 @@ namespace jpd
     }
 
     inline [[nodiscard]]
-        std::vector<size_t> PartitionTasks::PartitionData(const size_t DataCount) noexcept
+    std::vector<size_t> PartitionTasks::PartitionData(const size_t DataCount) noexcept
     {
         size_t Block = (DataCount / m_PartitionCount);
         float  FBlock = (DataCount / static_cast<float>(m_PartitionCount));
