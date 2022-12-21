@@ -1,3 +1,7 @@
+#define Ref(x)          std::ref(x)
+#define ScopeLock(x)    std::scoped_lock _sl(x)
+#define CriticalLock(x) std::unique_lock _ul(x)
+
 namespace jpd
 {
     /*
@@ -64,4 +68,75 @@ namespace jpd
     {
         using Type = T;
     };
+
+
+
+
+    template <typename... Args>
+    void PrintTypes(std::ostream& out, Args&&... args)
+    {
+        (( out << "Type: " << typeid(args).name() << " | "), ...);
+        out << "\n";
+    }
+    template <typename... Args>
+    void PrintTypes(std::ostream& out, std::tuple<Args...>&)
+    {
+        ((out << "Type: " << typeid(Args).name() << " | "), ...);
+        out << "\n";
+    }
+    template <typename... Args>
+    void PrintTypes(std::ostream& out)
+    {
+        ((out << "Type: " << typeid(Args).name() << " | "), ...);
+        out << "\n";
+    }
+
+
+
+
+
+
+    //template <typename... T_Args, typename... T_Values, typename T_Concat_Tuple = void>
+    //inline std::tuple<T_Args...> ReturnValidType(std::tuple<T_Args...>* Args, std::tuple<T_Values...>* Values, T_Concat_Tuple* Output, const size_t Index)
+    //{
+    //    using FuncParamType  = std::tuple<T_Args...>;
+    //    using InputParamType = std::tuple<T_Values...>;
+
+    //    using ExtractedType = Extract<Index, FuncParamType>::Type;
+    //    using InputType     = Extract<Index, InputParamType>::Type;
+
+    //    // Index >= 1
+    //    if (Output)
+    //    {
+    //        auto CatTuple = std::tuple_cat(*Output, std::is_lvalue_reference_v<ExtractedType> ? std::ref(std::get<Index>(*Values))
+    //                                                                                          : std::forward<InputType>(std::get<Index>(Values)) );
+
+    //        if (Index + 1 == sizeof...(T_Args))
+    //        {
+    //            PrintTypes(std::cout, CatTuple);
+    //            return std::move(CatTuple);
+    //        }
+    //        else
+    //        {
+    //            return ReturnValidType(Args, Values, &CatTuple, Index+1);
+    //        }
+    //    }
+    //    // Index == 0
+    //    else
+    //    {
+    //        assert(Index == 0);
+
+    //        auto BaseTuple = std::make_tuple<ExtractedType>( std::is_lvalue_reference_v<ExtractedType> ? std::ref(std::get<Index>(*Values))
+    //                                                                                                   : std::forward<InputType>(std::get<Index>(Values)) );
+    //        return ReturnValidType(Args, Values, &BaseTuple, Index+1);
+    //    }
+    //}
+
+    //template <typename... T_Args, typename... T_Values>
+    //inline std::tuple<T_Args...> ReturnValidType(std::tuple<T_Args...>* Args, std::tuple<T_Values...>* Values)
+    //{
+    //    assert( sizeof...(T_Args) == sizeof...(T_Values) );
+    //    int* a = nullptr;
+    //    return ReturnValidType(Args, Values, a, 0);
+    //}
 }

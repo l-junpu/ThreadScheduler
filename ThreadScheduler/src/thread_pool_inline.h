@@ -34,85 +34,19 @@ namespace jpd
         VoidFunc Task = std::bind( std::forward<Func>(F)
                                  , std::forward<Args>(args)... );
         {
-            std::scoped_lock ScopeLock(m_MutexLock);
+            ScopeLock(m_MutexLock);
             m_TaskQueue.push(Task);
         }
         ++m_TotalTaskCount;
         m_CVNewTask.notify_one();
     }
 
-    // test
-    template <typename... T_Args, typename... T_Values, typename T_Concat_Tuple = void>
-    inline std::tuple<T_Args...> ReturnValidType(std::tuple<T_Args...>* Args, std::tuple<T_Values...>* Values, T_Concat_Tuple* Output, const size_t Index)
-    {
-        using FuncParamType  = std::tuple<T_Args...>;
-        using InputParamType = std::tuple<T_Values...>;
-
-        using ExtractedType = Extract<Index, FuncParamType>::Type;
-        using InputType     = Extract<Index, InputParamType>::Type;
-
-        // Index >= 1
-        if (Output)
-        {
-            auto CatTuple = std::tuple_cat(*Output, std::is_lvalue_reference_v<ExtractedType> ? std::ref(std::get<Index>(*Values))
-                                                                                              : std::forward<InputType>(std::get<Index>(Values)) );
-
-            if (Index + 1 == sizeof...(T_Args))
-            {
-                PrintTypes(std::cout, CatTuple);
-                return std::move(CatTuple);
-            }
-            else
-            {
-                return ReturnValidType(Args, Values, &CatTuple, Index+1);
-            }
-        }
-        // Index == 0
-        else
-        {
-            assert(Index == 0);
-
-            auto BaseTuple = std::make_tuple<ExtractedType>( std::is_lvalue_reference_v<ExtractedType> ? std::ref(std::get<Index>(*Values))
-                                                                                                       : std::forward<InputType>(std::get<Index>(Values)) );
-            return ReturnValidType(Args, Values, &BaseTuple, Index+1);
-        }
-    }
-
-    template <typename... T_Args, typename... T_Values>
-    inline std::tuple<T_Args...> ReturnValidType(std::tuple<T_Args...>* Args, std::tuple<T_Values...>* Values)
-    {
-        assert( sizeof...(T_Args) == sizeof...(T_Values) );
-        int* a = nullptr;
-        return ReturnValidType(Args, Values, a, 0);
-    }
-
-    template <typename... Args>
-    void PrintTypes(std::ostream& out, Args&&... args)
-    {
-        out << "\n\n";
-        (( out << "Type: " << typeid(args).name() ), ...);
-        out << "\n\n";
-    }
-    template <typename... Args>
-    void PrintTypes(std::ostream& out, std::tuple<Args...>&)
-    {
-        out << "\n\n";
-        ((out << "Type: " << typeid(Args).name()), ...);
-        out << "\n\n";
-    }
-    template <typename... Args>
-    void PrintTypes(std::ostream& out)
-    {
-        out << "\n\n";
-        ((out << "Type: " << typeid(Args).name()), ...);
-        out << "\n\n";
-    }
-    // test
-
     template <typename Func, typename... T_Args, typename ReturnType>
     inline [[nodiscard]]
     std::future<ReturnType> ThreadPool::QueueFunction(Func&& F, T_Args&&... Args) noexcept
     {
+        PrintTypes(std::cout, std::forward<T_Args>(Args)...);
+
         std::function<ReturnType()> Task = std::bind( std::forward<Func>(F)
                                                     , std::forward<T_Args>(Args)... );
         std::shared_ptr<std::promise<ReturnType>> TaskPromise = std::make_shared<std::promise<ReturnType>>();
@@ -161,15 +95,10 @@ namespace jpd
         assert(PartitionCount > 0);
 
         using Details = Traits<decltype(F)>;
-        
-        PrintTypes(std::cout, std::forward<T_Args>(Args)...);
-        PrintTypes<Details::Args_T>(std::cout);
-        std::tuple<T_Args...> ParamsToConvertTuple = std::make_tuple<T_Args...>( std::forward<T_Args>(Args)... );
-        std::tuple<Details::Args_T> FnInputParams = ReturnValidType(null_tuple_v<Details::Args_T>, &ParamsToConvertTuple);
 
         // Assign Relevant Number Of Partitions
-        GroupTasks<ReturnType> TaskFutures(PartitionCount);
-        PartitionTasks PartitionData(ComputeThreadCount(PartitionCount), StartIndex, EndIndex);
+        GroupTasks<ReturnType> TaskFutures( ComputeThreadCount(PartitionCount) );
+        PartitionTasks PartitionData( ComputeThreadCount(PartitionCount), StartIndex, EndIndex );
         auto StartIndices = PartitionData.PartitionLoopIndices();
 
         for (size_t i = 0, max = StartIndices.size(); i < (max - 1); ++i)

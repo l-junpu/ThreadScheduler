@@ -48,7 +48,7 @@ int main()
 
     //
 
-    jpd::ThreadPool Pool( 3 ); // Use Only 3 Threads For E.g.
+    jpd::ThreadPool Pool(std::thread::hardware_concurrency() - 1); // Use Only 3 Threads For E.g.
     //auto future1 = Pool.QueueFunction(func, 0500, "Testing da bomb 1");
     //auto future2 = Pool.QueueFunction(func, 1000, "Testing da bomb 2");
     //auto future3 = Pool.QueueFunction(func, 1500, "Testing da bomb 3");
@@ -81,20 +81,26 @@ int main()
 
 
 
-    std::cout << "\n\n\nTesting Modification Of Local Data" << std::endl;
-    int update_from_thread = 0;
+    std::cout << "\n\n\nTesting Modification Of Reference Data" << std::endl;
+    std::vector<int> break_test(100000);
     std::mutex mmm;
 
-    auto inner_update_futures = Pool.QueueAndPartitionLoop(0, 15, 3, [](size_t a, size_t b, int& value)
+    auto inner_update_futures = Pool.QueueAndPartitionLoop(0, break_test.size(), 64, [](size_t a, size_t b, std::vector<int>& value, std::mutex& m)
                                                                      {
-                                                                         std::cout << "Start: " << a << " | End: " << b << std::endl;
                                                                          for (size_t i = a; i < b; ++i)
                                                                          {
-                                                                             std::cout << "Parallelized Loop Value: " << value++ << std::endl;
+                                                                             ScopeLock(m);
+                                                                             value[0] += 1;
                                                                          }
-                                                                         return value;
-                                                                     }, std::ref(update_from_thread));
-
+                                                                         return value[0];
+                                                                     }, Ref(break_test), Ref(mmm));
+    for (size_t i = 0, max = break_test.size(); i < max; ++i)
+    {
+        ScopeLock(mmm);
+        break_test[0] += 1;
+    }
+    // Wait For All Threads To Complete
     for (auto results : inner_update_futures.GetResults())
         std::cout << "Multi-Future Parallelized Loop Results: " << results << std::endl;
+    std::cout << "Value: " << break_test[0] << std::endl;
 }

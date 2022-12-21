@@ -60,7 +60,7 @@ set( MAIN_FILTER "Source Files" )
 set(
 	Exclude_List
 	"${ROOT_FILE_PATH}/build/CMakeFiles/*"
-	"${SOURCE_FILE_PATH}/ThreadScheduler/Source.cpp" # Remove "Source.cpp" Cause Its Added Later As Executable File
+	#"${SOURCE_FILE_PATH}/ThreadScheduler/Source.cpp" # Remove "Source.cpp" Cause Its Added Later As Executable File
 )
 
 message("Root Path: "  ${ROOT_FILE_PATH})
@@ -144,10 +144,12 @@ source_group( ${MAIN_FILTER}  FILES  "${CMAKE_SOURCE_DIR}/Source.cpp" )
 # 	source.cpp
 # )
 
+add_subdirectory(ThreadScheduler)
 
 # Set Source.cpp as Main Executable File
 # Change Director As Required
-add_executable( ${PROJECT_NAME}  "${CMAKE_SOURCE_DIR}/ThreadScheduler/ThreadScheduler/Source.cpp"  ${Source_File_List} )
+#add_executable( ${PROJECT_NAME}  "${CMAKE_SOURCE_DIR}/ThreadScheduler/Source.cpp"  ${Source_File_List} )
+add_library( ${PROJECT_NAME}  ${Source_File_List} )
 
 # Set Current Project As "Startup Project"
 set_property( DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}  PROPERTY  VS_STARTUP_PROJECT  ${PROJECT_NAME} )
