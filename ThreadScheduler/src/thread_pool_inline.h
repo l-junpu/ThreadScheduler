@@ -27,29 +27,13 @@ namespace jpd
         return m_TotalTaskCount - m_TaskQueue.size();
     }
 
-    template <typename Func, typename... Args>
-    inline [[nodiscard]]
-    void ThreadPool::QueueTask(Func&& F, Args&&... args) noexcept
-    {
-        VoidFunc Task = std::bind( std::forward<Func>(F)
-                                 , std::forward<Args>(args)... );
-        {
-            ScopeLock(m_MutexLock);
-            m_TaskQueue.push(Task);
-        }
-        ++m_TotalTaskCount;
-        m_CVNewTask.notify_one();
-    }
-
     template <typename Func, typename... T_Args, typename ReturnType>
     inline [[nodiscard]]
     std::future<ReturnType> ThreadPool::QueueFunction(Func&& F, T_Args&&... Args) noexcept
     {
-        PrintTypes(std::cout, std::forward<T_Args>(Args)...);
-
         std::function<ReturnType()> Task = std::bind( std::forward<Func>(F)
                                                     , std::forward<T_Args>(Args)... );
-        std::shared_ptr<std::promise<ReturnType>> TaskPromise = std::make_shared<std::promise<ReturnType>>();
+        auto TaskPromise = std::make_shared<std::promise<ReturnType>>();
 
         QueueTask( [Task, TaskPromise]()
                    {
@@ -109,11 +93,6 @@ namespace jpd
                                           , std::forward<T_Args>(Args)... );
         }
 
-        TaskFutures[StartIndices.size() - 1] = QueueFunction( std::forward<Func>(F)
-                                                            , StartIndices.back()
-                                                            , EndIndex
-                                                            , std::forward<T_Args>(Args)... );
-
         return TaskFutures;
     }
 
@@ -169,6 +148,21 @@ namespace jpd
         {
             m_Threads[i].join();
         }
+    }
+
+    template <typename Func, typename... T_Args, typename ReturnType>
+    inline
+    void ThreadPool::QueueTask(Func&& F, T_Args&&... Args) noexcept
+    {
+        VoidFunc Task = std::bind( std::forward<Func>(F)
+                                 , std::forward<T_Args>(Args)... );
+
+        BEGIN_SCOPE_LOCK(m_MutexLock);
+            m_TaskQueue.push(Task);
+        END_SCOPE_LOCK()
+
+        ++m_TotalTaskCount;
+        m_CVNewTask.notify_one();
     }
 
     inline [[nodiscard]]

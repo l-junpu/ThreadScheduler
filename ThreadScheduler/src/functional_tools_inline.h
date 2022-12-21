@@ -1,6 +1,12 @@
-#define Ref(x)          std::ref(x)
-#define ScopeLock(x)    std::scoped_lock _sl(x)
-#define CriticalLock(x) std::unique_lock _ul(x)
+#define REF(x)                 \
+    std::ref(x)
+
+#define BEGIN_SCOPE_LOCK(x)    \
+{                              \
+    std::scoped_lock __sl(x);
+#define END_SCOPE_LOCK()       \
+}
+
 
 namespace jpd
 {
@@ -50,28 +56,11 @@ namespace jpd
 
     template< typename T_TUPLE>
     constexpr auto null_tuple_v = static_cast<T_TUPLE*>(0);
-    
-    
-
-    // Extract Tuple Types
-    template <int N, typename... Ts>
-    struct Extract;
-
-    template <int N, typename T, typename... Ts>
-    struct Extract<N, std::tuple<T, Ts...>>
-    {
-        using Type = typename Extract<N - 1, std::tuple<Ts...>>::type;
-    };
-
-    template <typename T, typename... Ts>
-    struct Extract<0, std::tuple<T, Ts...>>
-    {
-        using Type = T;
-    };
 
 
-
-
+    /*
+        Print T_Args Types
+    */
     template <typename... Args>
     void PrintTypes(std::ostream& out, Args&&... args)
     {
@@ -91,8 +80,14 @@ namespace jpd
         out << "\n";
     }
 
+    /*
+        Concepts
+    */
+    template <typename ReturnType>
+    concept IsVoid_T = std::is_same_v<ReturnType, void>;
 
-
+    template <typename ReturnType>
+    concept NotVoid_T = !(std::is_same_v<ReturnType, void>);
 
 
 

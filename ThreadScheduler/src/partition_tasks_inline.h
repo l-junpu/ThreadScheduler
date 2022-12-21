@@ -68,13 +68,13 @@ namespace jpd
                                            : Block;
         size_t LastBlock = DataCount - (MainBlock * (m_PartitionCount - 1));
 
-        std::vector<size_t> PartitionedGroupSize(m_PartitionCount);
+        std::vector<size_t> PartitionedGroupSize(m_PartitionCount + 1);
 
         for (size_t i = 0, max = PartitionedGroupSize.size(); i < max - 1; ++i)
         {
             PartitionedGroupSize[i] = StartIndex + i * MainBlock;
         }
-        PartitionedGroupSize[PartitionedGroupSize.size() - 1] = EndIndex - LastBlock;
+        PartitionedGroupSize[PartitionedGroupSize.size() - 1] = EndIndex;
 
         // Returns A Vector Of Starting Indices Of The For Loop
         return PartitionedGroupSize;

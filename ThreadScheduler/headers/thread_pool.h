@@ -11,37 +11,48 @@ namespace jpd
         /*
             Public Member Functions
         */
-        explicit ThreadPool(const size_t ThreadCount = 0, const size_t MinimumPartitionSize = 25) noexcept;
+        explicit ThreadPool( const size_t ThreadCount = 0
+                           , const size_t MinimumPartitionSize = 25 ) noexcept;
 
         ~ThreadPool() noexcept;
 
+        template < typename    Func
+                 , typename... T_Args
+                 , typename    ReturnType = std::invoke_result_t < std::decay_t<Func>, T_Args...> >
         inline [[nodiscard]]
-        size_t GetTotalTaskCount(void) const noexcept;
+        std::future<ReturnType> QueueFunction( Func&&      F
+                                             , T_Args&&... Args) noexcept;
 
+        template < typename    Func
+                 , typename... T_Args
+                 , typename    ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, T_Args...> >
         inline [[nodiscard]]
-        size_t GetActiveTaskCount(void) const noexcept;
+        GroupTasks<ReturnType> QueueAndPartitionLoop( const size_t EndIndex
+                                                    , const size_t PartitionCount
+                                                    , Func&&       F
+                                                    , T_Args&&...  Args) noexcept;
 
-        template <typename Func, typename... Args>
+        template < typename    Func
+                 , typename... T_Args
+                 , typename    ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, T_Args...> >
         inline [[nodiscard]]
-        void QueueTask(Func&& F, Args&&... args) noexcept;
-
-        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t < std::decay_t<Func>, Args...>>
-        inline [[nodiscard]]
-        std::future<ReturnType> QueueFunction(Func&& F, Args&&... args) noexcept;
-
-        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, Args...>>
-        inline [[nodiscard]]
-        GroupTasks<ReturnType> QueueAndPartitionLoop(const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept;
-
-        template <typename Func, typename... Args, typename ReturnType = std::invoke_result_t<std::decay_t<Func>, size_t, size_t, Args...>>
-        inline [[nodiscard]]
-        GroupTasks<ReturnType> QueueAndPartitionLoop(const size_t StartIndex, const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept;
+        GroupTasks<ReturnType> QueueAndPartitionLoop( const size_t StartIndex
+                                                    , const size_t EndIndex
+                                                    , const size_t PartitionCount
+                                                    , Func&&       F
+                                                    , T_Args&&...  Args) noexcept;
 
         inline
         void WaitForAllTasks(void) noexcept;
 
         inline
         void ResetThreads(const size_t ThreadCount = 0) noexcept;
+
+        inline [[nodiscard]]
+        size_t GetTotalTaskCount( void ) const noexcept;
+
+        inline [[nodiscard]]
+        size_t GetActiveTaskCount( void ) const noexcept;
 
     private:
 
@@ -53,6 +64,13 @@ namespace jpd
 
         inline
         void DestroyThreads(void) noexcept;
+
+        template < typename    Func
+                 , typename... T_Args
+                 , typename    ReturnType = std::invoke_result_t < std::decay_t<Func>, T_Args...> >
+        inline
+        void QueueTask( Func&&      F
+                      , T_Args&&... Args ) noexcept;
 
         inline [[nodiscard]]
         size_t ComputeThreadCount(const size_t ThreadCount) noexcept;

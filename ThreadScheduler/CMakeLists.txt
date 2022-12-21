@@ -137,19 +137,9 @@ source_group( ${MAIN_FILTER}  FILES  ${Build_Files} )
 # Add Main To Solution Directory In VS
 source_group( ${MAIN_FILTER}  FILES  "${CMAKE_SOURCE_DIR}/Source.cpp" )
 
-
-# # Build As Library
-# add_library(mymath ${MYMATH_BUILD_TYPE}
-# 	header.h
-# 	source.cpp
-# )
-
-add_subdirectory(ThreadScheduler)
-
 # Set Source.cpp as Main Executable File
 # Change Director As Required
-#add_executable( ${PROJECT_NAME}  "${CMAKE_SOURCE_DIR}/ThreadScheduler/Source.cpp"  ${Source_File_List} )
-add_library( ${PROJECT_NAME}  ${Source_File_List} )
+add_executable( ${PROJECT_NAME}  "${CMAKE_SOURCE_DIR}/ThreadScheduler/Source.cpp"  ${Source_File_List} )
 
 # Set Current Project As "Startup Project"
 set_property( DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}  PROPERTY  VS_STARTUP_PROJECT  ${PROJECT_NAME} )

@@ -30,7 +30,8 @@ namespace jpd
     }
 
     template <typename ReturnType>
-    void GroupTasks<ReturnType>::GetResults(void) noexcept requires(std::same_as<ReturnType, void>)
+    inline
+    void GroupTasks<ReturnType>::WaitForAll(void) noexcept requires( IsVoid_T<ReturnType> )
     {
         for (auto& Task : m_Tasks)
         {
@@ -41,7 +42,7 @@ namespace jpd
 
     template <typename ReturnType>
     inline [[nodiscard]]
-    std::vector<ReturnType> GroupTasks<ReturnType>::GetResults(void) noexcept requires(!std::same_as<ReturnType, void>)
+    std::vector<ReturnType> GroupTasks<ReturnType>::GetResults(void) noexcept requires( NotVoid_T<ReturnType> )
     {
         std::vector<ReturnType> Results(m_Tasks.size());
         for (size_t i = 0, max = m_Tasks.size(); i < max; ++i)

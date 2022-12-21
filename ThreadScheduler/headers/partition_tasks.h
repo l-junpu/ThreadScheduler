@@ -13,7 +13,9 @@ namespace jpd
     {
     public:
 
-        explicit PartitionTasks(const size_t PartitionCount, const size_t StartIndex = 0, const size_t EndIndex = 0) noexcept;
+        explicit PartitionTasks( const size_t PartitionCount
+                               , const size_t StartIndex = 0
+                               , const size_t EndIndex = 0) noexcept;
 
         inline [[nodiscard]]
         std::vector<size_t> PartitionData(void) noexcept;
@@ -30,7 +32,8 @@ namespace jpd
         std::vector<size_t> PartitionLoopIndices(void) noexcept;
 
         inline [[nodiscard]]
-        std::vector<size_t> PartitionLoopIndices(size_t StartIndex, size_t EndIndex) noexcept;
+        std::vector<size_t> PartitionLoopIndices( size_t StartIndex
+                                                , size_t EndIndex) noexcept;
 
     private:
 
