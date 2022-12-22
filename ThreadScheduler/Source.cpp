@@ -8,16 +8,16 @@ int main()
     std::vector<int> break_test(100000);
     std::mutex safe_mutex;
 
-    auto inner_update_futures = Pool.QueueAndPartitionLoop(0, 1000000, 4, [](size_t a, size_t b, std::vector<int>& value, std::mutex& m)
-                                                                     {
-                                                                         for (size_t i = a; i < b; ++i)
+    auto inner_update_futures = Pool.QueueAndPartitionLoop(0, 125, 16, 0, [](size_t a, size_t b, std::vector<int>& value, std::mutex& m)
                                                                          {
-                                                                             BEGIN_SCOPE_LOCK(m)
-                                                                                value[0] += 1;
-                                                                             END_SCOPE_LOCK()
-                                                                         }
-                                                                         return value[0];
-                                                                     }, REF(break_test), REF(safe_mutex));
+                                                                             for (size_t i = a; i < b; ++i)
+                                                                             {
+                                                                                 BEGIN_SCOPE_LOCK(m)
+                                                                                    value[0] += 1;
+                                                                                 END_SCOPE_LOCK()
+                                                                             }
+                                                                             return value[0];
+                                                                         }, REF(break_test), REF(safe_mutex));
 
     // Wait For All Threads To Complete
     for (auto results : inner_update_futures.GetResults())

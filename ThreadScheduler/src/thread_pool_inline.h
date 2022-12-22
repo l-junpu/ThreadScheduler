@@ -65,7 +65,7 @@ namespace jpd
 
     template <typename Func, typename... Args, typename ReturnType>
     inline [[nodiscard]]
-    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionLoop(const size_t EndIndex, const size_t PartitionCount, Func&& F, Args&&... args) noexcept
+    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionLoop(const size_t EndIndex, const size_t PartitionCount, const size_t MinPartitionSize, Func&& F, Args&&... args) noexcept
     {
         assert(PartitionCount > 0);
 
@@ -74,16 +74,15 @@ namespace jpd
 
     template <typename Func, typename... T_Args, typename ReturnType>
     inline [[nodiscard]]
-    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionLoop(const size_t StartIndex, const size_t EndIndex, const size_t PartitionCount, Func&& F, T_Args&&... Args) noexcept
+    GroupTasks<ReturnType> ThreadPool::QueueAndPartitionLoop(const size_t StartIndex, const size_t EndIndex, const size_t PartitionCount, const size_t MinPartitionSize, Func&& F, T_Args&&... Args) noexcept
     {
         assert(PartitionCount > 0);
 
-        using Details = Traits<decltype(F)>;
-
         // Assign Relevant Number Of Partitions
-        GroupTasks<ReturnType> TaskFutures( ComputeThreadCount(PartitionCount) );
-        PartitionTasks PartitionData( ComputeThreadCount(PartitionCount), StartIndex, EndIndex );
-        auto StartIndices = PartitionData.PartitionLoopIndices();
+        auto DelegatedTaskCount = MinPartitionSize ? std::ceil((EndIndex - StartIndex) / static_cast<float>(MinPartitionSize))
+                                                   : ComputeThreadCount(PartitionCount);
+        GroupTasks<ReturnType> TaskFutures(DelegatedTaskCount);
+        auto StartIndices = PartitionTasks::PartitionLoopIndices( StartIndex, EndIndex, ComputeThreadCount(PartitionCount), MinPartitionSize ? MinPartitionSize : m_MinPartitionSize);
 
         for (size_t i = 0, max = StartIndices.size(); i < (max - 1); ++i)
         {

@@ -12,7 +12,7 @@ namespace jpd
             Public Member Functions
         */
         explicit ThreadPool( const size_t ThreadCount = 0
-                           , const size_t MinimumPartitionSize = 25 ) noexcept;
+                           , const size_t MinimumPartitionSize = 0 ) noexcept;
 
         ~ThreadPool() noexcept;
 
@@ -29,6 +29,7 @@ namespace jpd
         inline [[nodiscard]]
         GroupTasks<ReturnType> QueueAndPartitionLoop( const size_t EndIndex
                                                     , const size_t PartitionCount
+                                                    , const size_t MinPartitionSize
                                                     , Func&&       F
                                                     , T_Args&&...  Args) noexcept;
 
@@ -39,6 +40,7 @@ namespace jpd
         GroupTasks<ReturnType> QueueAndPartitionLoop( const size_t StartIndex
                                                     , const size_t EndIndex
                                                     , const size_t PartitionCount
+                                                    , const size_t MinPartitionSize
                                                     , Func&&       F
                                                     , T_Args&&...  Args) noexcept;
 
