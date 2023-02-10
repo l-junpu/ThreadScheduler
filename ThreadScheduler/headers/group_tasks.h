@@ -22,8 +22,8 @@ namespace jpd
         inline [[nodiscard]]
         std::future<ReturnType>& operator[](const size_t Index) noexcept;
 
-        inline
-        void WaitForAll(void) noexcept requires( IsVoid_T<ReturnType> );
+        //inline
+        //void WaitForAll(void) noexcept requires( IsVoid_T<ReturnType> );
 
         inline [[nodiscard]]
         std::vector<ReturnType> GetResults(void) noexcept requires( NotVoid_T<ReturnType> );

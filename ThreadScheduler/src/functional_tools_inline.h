@@ -53,11 +53,6 @@ namespace jpd
     template<class T> struct Traits<const T*>  : Traits<T> {};
 
 
-
-    template< typename T_TUPLE>
-    constexpr auto null_tuple_v = static_cast<T_TUPLE*>(0);
-
-
     /*
         Print T_Args Types
     */
@@ -88,50 +83,4 @@ namespace jpd
 
     template <typename ReturnType>
     concept NotVoid_T = !(std::is_same_v<ReturnType, void>);
-
-
-
-    //template <typename... T_Args, typename... T_Values, typename T_Concat_Tuple = void>
-    //inline std::tuple<T_Args...> ReturnValidType(std::tuple<T_Args...>* Args, std::tuple<T_Values...>* Values, T_Concat_Tuple* Output, const size_t Index)
-    //{
-    //    using FuncParamType  = std::tuple<T_Args...>;
-    //    using InputParamType = std::tuple<T_Values...>;
-
-    //    using ExtractedType = Extract<Index, FuncParamType>::Type;
-    //    using InputType     = Extract<Index, InputParamType>::Type;
-
-    //    // Index >= 1
-    //    if (Output)
-    //    {
-    //        auto CatTuple = std::tuple_cat(*Output, std::is_lvalue_reference_v<ExtractedType> ? std::ref(std::get<Index>(*Values))
-    //                                                                                          : std::forward<InputType>(std::get<Index>(Values)) );
-
-    //        if (Index + 1 == sizeof...(T_Args))
-    //        {
-    //            PrintTypes(std::cout, CatTuple);
-    //            return std::move(CatTuple);
-    //        }
-    //        else
-    //        {
-    //            return ReturnValidType(Args, Values, &CatTuple, Index+1);
-    //        }
-    //    }
-    //    // Index == 0
-    //    else
-    //    {
-    //        assert(Index == 0);
-
-    //        auto BaseTuple = std::make_tuple<ExtractedType>( std::is_lvalue_reference_v<ExtractedType> ? std::ref(std::get<Index>(*Values))
-    //                                                                                                   : std::forward<InputType>(std::get<Index>(Values)) );
-    //        return ReturnValidType(Args, Values, &BaseTuple, Index+1);
-    //    }
-    //}
-
-    //template <typename... T_Args, typename... T_Values>
-    //inline std::tuple<T_Args...> ReturnValidType(std::tuple<T_Args...>* Args, std::tuple<T_Values...>* Values)
-    //{
-    //    assert( sizeof...(T_Args) == sizeof...(T_Values) );
-    //    int* a = nullptr;
-    //    return ReturnValidType(Args, Values, a, 0);
-    //}
 }

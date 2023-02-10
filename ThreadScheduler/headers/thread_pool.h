@@ -21,7 +21,7 @@ namespace jpd
                  , typename    ReturnType = std::invoke_result_t < std::decay_t<Func>, T_Args...> >
         inline [[nodiscard]]
         std::future<ReturnType> QueueFunction( Func&&      F
-                                             , T_Args&&... Args) noexcept;
+                                             , T_Args&&... Args ) noexcept;
 
         template < typename    Func
                  , typename... T_Args
@@ -31,7 +31,7 @@ namespace jpd
                                                     , const size_t PartitionCount
                                                     , const size_t MinPartitionSize
                                                     , Func&&       F
-                                                    , T_Args&&...  Args) noexcept;
+                                                    , T_Args&&...  Args ) noexcept;
 
         template < typename    Func
                  , typename... T_Args
@@ -42,7 +42,7 @@ namespace jpd
                                                     , const size_t PartitionCount
                                                     , const size_t MinPartitionSize
                                                     , Func&&       F
-                                                    , T_Args&&...  Args) noexcept;
+                                                    , T_Args&&...  Args ) noexcept;
 
         inline
         void WaitForAllTasks(void) noexcept;
@@ -79,6 +79,27 @@ namespace jpd
 
         inline
         void WorkerThread(void) noexcept;
+
+
+        /*
+            Partition Helper Functions
+        */
+        template <typename Container>
+        requires( std::ranges::contiguous_range<Container> )
+        inline [[nodiscard]]
+        std::vector<size_t> PartitionData( const Container& Data
+                                         , const size_t PartitionCount ) noexcept;
+
+        inline [[nodiscard]]
+        std::vector<size_t> PartitionData( const size_t DataCount
+                                         , const size_t PartitionCount ) noexcept;
+
+        inline [[nodiscard]]
+        std::vector<size_t> PartitionLoopIndices( size_t       StartIndex
+                                                , size_t       EndIndex
+                                                , const size_t PartitionCount
+                                                , const size_t MinimumPartitionSize = 0 ) noexcept;
+
 
         /*
             Variables

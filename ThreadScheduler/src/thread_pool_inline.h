@@ -2,6 +2,9 @@
 
 namespace jpd
 {
+    /*
+        Public Member Functions
+    */
     ThreadPool::ThreadPool(const size_t ThreadCount, const size_t MinimumPartitionSize) noexcept :
         m_AvailableThreads{ ComputeThreadCount(ThreadCount) }
     ,   m_MinPartitionSize{ MinimumPartitionSize }
@@ -78,11 +81,10 @@ namespace jpd
     {
         assert(PartitionCount > 0);
 
+        auto StartIndices = PartitionLoopIndices( StartIndex, EndIndex, ComputeThreadCount(PartitionCount), MinPartitionSize ? MinPartitionSize : m_MinPartitionSize);
         // Assign Relevant Number Of Partitions
-        auto DelegatedTaskCount = MinPartitionSize ? std::ceil((EndIndex - StartIndex) / static_cast<float>(MinPartitionSize))
-                                                   : ComputeThreadCount(PartitionCount);
-        GroupTasks<ReturnType> TaskFutures(DelegatedTaskCount);
-        auto StartIndices = PartitionTasks::PartitionLoopIndices( StartIndex, EndIndex, ComputeThreadCount(PartitionCount), MinPartitionSize ? MinPartitionSize : m_MinPartitionSize);
+        GroupTasks<ReturnType> TaskFutures( StartIndices.size() - 1 );
+
 
         for (size_t i = 0, max = StartIndices.size(); i < (max - 1); ++i)
         {
@@ -122,9 +124,9 @@ namespace jpd
 
 
 
-
-
-
+    /*
+        Private Member Functions
+    */
     inline
     void ThreadPool::CreateThreads(void) noexcept
     {
@@ -196,5 +198,68 @@ namespace jpd
                 }
             }
         }
+    }
+
+
+
+
+    /*
+        Partition Helper Functions
+    */
+    template <typename Container>
+    requires( std::ranges::contiguous_range<Container> )
+    inline [[nodiscard]]
+    std::vector<size_t> ThreadPool::PartitionData(const Container& Data, const size_t PartitionCount) noexcept
+    {
+        return PartitionData(Data.size(), PartitionCount);
+    }
+
+    inline [[nodiscard]]
+    std::vector<size_t> ThreadPool::PartitionData(const size_t DataCount, const size_t PartitionCount) noexcept
+    {
+        // There Should Be Elements To Partition
+        assert(DataCount > 0);
+
+        size_t Block = (DataCount / PartitionCount);
+        float  FBlock = (DataCount / static_cast<float>(PartitionCount));
+
+        size_t MainBlock = Block != FBlock ? Block + 1
+            : Block;
+        size_t LastBlock = DataCount - (MainBlock * (PartitionCount - 1));
+
+        std::vector<size_t> PartitionedGroupSize(PartitionCount, MainBlock);
+        PartitionedGroupSize[PartitionedGroupSize.size() - 1] = LastBlock;
+
+        // Returns The Size Of Each Partitioned Data Set
+        return PartitionedGroupSize;
+    }
+
+    inline [[nodiscard]]
+    std::vector<size_t> ThreadPool::PartitionLoopIndices(size_t StartIndex, size_t EndIndex, const size_t PartitionCount, const size_t MinimumPartitionSize) noexcept
+    {
+        if (EndIndex < StartIndex)
+        {
+            std::swap(StartIndex, EndIndex);
+        }
+
+        size_t DataCount = EndIndex - StartIndex;
+        size_t Block = MinimumPartitionSize ? MinimumPartitionSize
+                                            : ( DataCount / PartitionCount );
+        float  FBlock = MinimumPartitionSize ? static_cast<float>(MinimumPartitionSize)
+                                             : (DataCount / static_cast<float>(PartitionCount));
+
+        size_t MainBlockSize = (Block != FBlock) && (Block < DataCount) ? Block + 1 // might need update this
+                                                                        : Block;
+
+        std::vector<size_t> PartitionedGroupSize(std::ceil(DataCount / static_cast<float>(MainBlockSize)) + 1);
+
+        for (size_t i = 0, max = PartitionedGroupSize.size(); i < max - 1; ++i)
+        {
+            PartitionedGroupSize[i] = StartIndex + i * MainBlockSize;
+        }
+        PartitionedGroupSize[PartitionedGroupSize.size() - 1] = EndIndex;
+
+        // Returns A Vector Of Starting Indices Of The For Loop
+        return PartitionedGroupSize;
     }
 }

@@ -29,7 +29,7 @@ namespace jpd
         return GetFuture(Index);
     }
 
-    template <typename ReturnType>
+    /*template <typename ReturnType>
     inline
     void GroupTasks<ReturnType>::WaitForAll(void) noexcept requires( IsVoid_T<ReturnType> )
     {
@@ -37,8 +37,7 @@ namespace jpd
         {
             Task.get();
         }
-        return;
-    }
+    }*/
 
     template <typename ReturnType>
     inline [[nodiscard]]
